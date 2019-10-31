@@ -46,20 +46,21 @@ how to swap pieces from one molecule to another.
 
 
 ```
-    >>> from rdkit import Chem
-    >>> from molvector import encode, canonical_order, mutate
-    >>> test3 = "NCCCCCOCC1OC(OCCc2c[nH]c3ccccc23)C(OCc2ccccc2)C(OCc2ccccc2)C1OCc1ccccc1"
-    >>> test4 = "NCCCCC(C(=O)NCCc1ccccc1)N1Cc2[nH]c3ccccc3c2CC(NC(=O)Cc2ccccc2)C1=O.O=C(O)C(F)(F)F"
-    >>> m = MolFromSmiles(test3)
-    >>> m2 = MolFromSmiles(test4)
-    >>> v = encode(m, canonical_order)[0]
-    >>> v2 = encode(m2, canonical_order)[0]
-    >>> while 1:
-    ...   r = mutate(v,v2)
-    ...   mol = decode(r)
-    ...   if mol: 
-    ...     smi = MolToSmiles(mol)
-    ...     print(smi)
+from rdkit import Chem
+from molvector import encode, decode, canonical_order, mutate
+test3 = "NCCCCCOCC1OC(OCCc2c[nH]c3ccccc23)C(OCc2ccccc2)C(OCc2ccccc2)C1OCc1ccccc1"
+test4 = "NCCCCC(C(=O)NCCc1ccccc1)N1Cc2[nH]c3ccccc3c2CC(NC(=O)Cc2ccccc2)C1=O.O=C(O)C(F)(F)F"
+m = Chem.MolFromSmiles(test3)
+m2 = Chem.MolFromSmiles(test4)
+v = encode(m, canonical_order)[0]
+v2 = encode(m2, canonical_order)[0]
+while 1:
+  r = mutate(v,v2)
+  mol = decode(r)
+  if mol: 
+    smi = Chem. MolToSmiles(mol)
+    print(smi)
+    break
 ```
 
 Generating ensembles for learning
@@ -69,19 +70,19 @@ The default N is 100,000 random samples are tested.  Many will not generate
 unique smiles during smiles traversals.
 
 ```
- >>> from molvector import encode
- >>> from rdkit.Chem import MolFromSmiles
- >>> test = "NCCCCCOCC1OC(OCCc2c[nH]c3ccccc23)C(OCc2ccccc2)C(OCc2ccccc2)C1OCc1ccccc1"
- >>> m = MolFromSmiles(test3)
- >>> vectors = encode(m)
+from molvector import encode
+from rdkit.Chem import MolFromSmiles
+test = "NCCCCCOCC1OC(OCCc2c[nH]c3ccccc23)C(OCc2ccccc2)C(OCc2ccccc2)C1OCc1ccccc1"
+m = MolFromSmiles(test3)
+vectors = encode(m)
 ```
 
 To control N
 
 ```
-  >>> import functools
-  >>> from molvector import generate_random_smiles_orders
-  >>> vectors = encode(m, functools.partial(generate_random_smiles_orders, N=100))
+import functools
+from molvector import generate_random_smiles_orders
+vectors = encode(m, functools.partial(generate_random_smiles_orders, N=100))
 ```
 
 Notes
