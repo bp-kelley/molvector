@@ -46,20 +46,20 @@ how to swap pieces from one molecule to another.
 
 
 ```
-	>>> from rdkit import Chem
-	>>> from molvector import encode, canonical_order, mutate
-	>>> test3 = "NCCCCCOCC1OC(OCCc2c[nH]c3ccccc23)C(OCc2ccccc2)C(OCc2ccccc2)C1OCc1ccccc1"
+    >>> from rdkit import Chem
+    >>> from molvector import encode, canonical_order, mutate
+    >>> test3 = "NCCCCCOCC1OC(OCCc2c[nH]c3ccccc23)C(OCc2ccccc2)C(OCc2ccccc2)C1OCc1ccccc1"
     >>> test4 = "NCCCCC(C(=O)NCCc1ccccc1)N1Cc2[nH]c3ccccc3c2CC(NC(=O)Cc2ccccc2)C1=O.O=C(O)C(F)(F)F"
     >>> m = MolFromSmiles(test3)
     >>> m2 = MolFromSmiles(test4)
     >>> v = encode(m, canonical_order)[0]
-	>>> v2 = encode(m2, canonical_order)[0]
-	>>> while 1:
-	...   r = mutate(v,v2)
-	...   mol = decode(r)
-	...   if mol: 
-	...     smi = MolToSmiles(mol)
-	...     print(smi)
+    >>> v2 = encode(m2, canonical_order)[0]
+    >>> while 1:
+    ...   r = mutate(v,v2)
+    ...   mol = decode(r)
+    ...   if mol: 
+    ...     smi = MolToSmiles(mol)
+    ...     print(smi)
 ```
 
 Generating ensembles for learning
