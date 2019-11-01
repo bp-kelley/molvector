@@ -1,3 +1,9 @@
+# Copyright (C) Brian P Kelley
+#  @@ All Rights Reserved @@
+# The contents are covered by the terms of the BSD license
+# which is included in the file license.txt, found at the root
+# of the molvector source tree.
+
 """molvector
 
 This is set of simple functions that convert molecules to and from
@@ -55,7 +61,7 @@ for a given size of input.  Currently we try 10,000 times to generate
 random smiles for any input size.
 """
 import random
-from rdkit.Chem import Atom, MolFromSmiles, MolToSmiles, RWMol, BondType, PeriodicTable
+from rdkit.Chem import Atom, MolFromSmiles, MolToSmiles, RWMol, BondType, GetPeriodicTable
 
 atom_size = 3
 max_num_bonds = 4
