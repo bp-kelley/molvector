@@ -76,6 +76,25 @@ def _blocks_from_fields(tokens):
     return blocks
 
 
+def _mirror_bonds(blocks):
+    """Add the forward half of every backward bond record.
+
+    molvector.decode only forms a bond when both atoms record it, while
+    mv_back writes each bond once. Records past max_num_bonds are dropped.
+    """
+    n = len(blocks)
+    out = [b[:mv.atom_size] for b in blocks]
+    for i, b in enumerate(blocks):
+        for btype, off in zip(b[mv.atom_size::2], b[mv.atom_size + 1::2]):
+            if not off:
+                continue
+            j = (i + off) % n
+            for src, dst in ((i, j), (j, i)):
+                if len(out[src]) < BLOCK:
+                    out[src].extend([btype, dst - src])
+    return out
+
+
 def detokenize(tokens, rep):
     """Return a canonical SMILES string or None."""
     try:
@@ -88,6 +107,8 @@ def detokenize(tokens, rep):
                 blocks = [[int(x) for x in t.split(",")] for t in tokens]
             else:
                 blocks = _blocks_from_fields(tokens)
+            if rep == "mv_back":
+                blocks = _mirror_bonds(blocks)
             v = []
             for b in blocks:
                 v.extend(b + [0] * (BLOCK - len(b)))
