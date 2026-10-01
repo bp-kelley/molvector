@@ -64,7 +64,7 @@ import random
 from rdkit.Chem import Atom, MolFromSmiles, MolToSmiles, RWMol, BondType, GetPeriodicTable
 
 atom_size = 3
-max_num_bonds = 4
+max_num_bonds = 5
 bond_size = 2
 bond_chunk_size = max_num_bonds*bond_size
 
@@ -102,13 +102,10 @@ def encode_the_atoms_bonds(v, atom, orders):
         bv.append(b)
         bv.append(o)
 
-    bv += [0] * (bond_chunk_size-len(bv))
     if len(bv) > bond_chunk_size:
-        raise ValueError("Atom %s has more than four bonds %s"%(
-            atom.GetIdx(), len(atom.GetBonds())))
-    if len(bv) < bond_chunk_size:
-        raise ValueError("Atom %s has fewer than four bonds %s"%(
-            atom.GetIdx(), len(atom.GetBonds())))
+        raise ValueError("Atom %s has more than %s bonds %s"%(
+            atom.GetIdx(), max_num_bonds, len(atom.GetBonds())))
+    bv += [0] * (bond_chunk_size-len(bv))
 
     v.extend(bv)
     
@@ -193,15 +190,16 @@ def decode(v):
     for i in range(nchunks):
         start = i*(atom_size+bond_chunk_size)
 
-        el, c, h,b1,o1,b2,o2,b3,o3,b4,o4 = v[start:start+chunksize]
-        
+        el, c, h = v[start:start+atom_size]
+        bond_records = v[start+atom_size:start+chunksize]
+
         atom = Atom(el)
         atom.SetFormalCharge(c)
         atom.SetNumExplicitHs(h)
         atom_idx = m.AddAtom(atom)
         assert atom_idx == i
 
-        for b, o in ((b1, o1), (b2, o2), (b3, o3), (b4, o4)):
+        for b, o in zip(bond_records[0::2], bond_records[1::2]):
             if o:
                 to_atom = atom_idx + o
                 bonds[ tuple(sorted((atom_idx, to_atom))) ]  = b
@@ -224,14 +222,15 @@ def toStringRep(v):
     out = []
     for i in range(nchunks):
         start = i*(atom_size+bond_chunk_size)
-        el, c, h,b1,o1,b2,o2,b3,o3,b4,o4 = v[start:start+chunksize]
+        el, c, h = v[start:start+atom_size]
+        bond_records = v[start+atom_size:start+chunksize]
         el = ("%2s"%p.GetElementSymbol(el)).replace(" ", "_")
         out.append(el)
         assert c<10
         out.append(str(c))
         assert h<10
         out.append(str(h))
-        for btype, o in ((b1,o1),(b2,o2),(b3,o3),(b4,o4)):
+        for btype, o in zip(bond_records[0::2], bond_records[1::2]):
             out.append( bond_symbols[btype] )
             out.append( "%04d"%o )
     return "".join(out)
