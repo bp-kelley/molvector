@@ -31,8 +31,9 @@ python bench.py report                        # writes runs/report.md
 Each rep is independent, so on several GPUs run them in parallel:
 
 ```bash
+python bench.py prepare --rep all
 i=0; for r in smiles selfies mv_atom mv_field; do
-  CUDA_VISIBLE_DEVICES=$i python bench.py train --rep $r && python bench.py sample --rep $r &
+  (export CUDA_VISIBLE_DEVICES=$i; python bench.py train --rep $r && python bench.py sample --rep $r) &
   i=$((i+1))
 done; wait; python bench.py report
 ```
