@@ -11,6 +11,7 @@ faster, or produce better molecules, than it learns SMILES or SELFIES?
 | `selfies`  | a SELFIES symbol                                     | ~35               |
 | `mv_atom`  | a whole molvector atom block (13 ints)               | ~22               |
 | `mv_field` | the atom fields, or one `(bond type, offset)` record | ~68               |
+| `mv_back`  | as `mv_field`, but each bond written once (to an earlier atom) | ~46     |
 
 All four use the canonical RDKit atom order by default. `--augment K` adds
 K random-order variants per molecule (randomized SMILES/SELFIES, or random
@@ -32,7 +33,7 @@ Each rep is independent, so on several GPUs run them in parallel:
 
 ```bash
 python bench.py prepare --rep all
-i=0; for r in smiles selfies mv_atom mv_field; do
+i=0; for r in smiles selfies mv_atom mv_field mv_back; do
   (export CUDA_VISIBLE_DEVICES=$i; python bench.py train --rep $r && python bench.py sample --rep $r) &
   i=$((i+1))
 done; wait; python bench.py report
@@ -66,6 +67,7 @@ and FCD against MOSES Test and TestSF.
   molecules, more with augmentation), so its embedding table adds parameters.
   The report lists parameter counts.
 - molvector writes each bond twice, once from each end. A model can emit
-  contradictory pairs; the decoder keeps the last one it reads.
+  contradictory pairs, and in a small CPU run this caused 80 to 95% of invalid
+  molvector samples. `mv_back` removes the duplicate to test that directly.
 - molvector currently drops stereochemistry, and so does this benchmark for
   every rep (MOSES is mostly stereo-free).

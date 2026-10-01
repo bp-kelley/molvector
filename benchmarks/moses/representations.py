@@ -9,6 +9,8 @@ tokens do not decode to a sanitizable molecule).
   mv_atom   molvector, one composite token per atom block
   mv_field  molvector, one token for the atom fields plus one token
             per non-empty (bond type, offset) record
+  mv_back   like mv_field, but each bond is written once, from its later
+            atom (negative offsets only), so the two ends cannot disagree
 """
 import os
 import re
@@ -20,7 +22,7 @@ from rdkit import Chem
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 import molvector as mv  # noqa: E402
 
-REPRESENTATIONS = ("smiles", "selfies", "mv_atom", "mv_field")
+REPRESENTATIONS = ("smiles", "selfies", "mv_atom", "mv_field", "mv_back")
 
 SMILES_REGEX = re.compile(
     r"(\[[^\]]+]|Br?|Cl?|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\|\/|:|~|@|\?|>|\*|\$|%[0-9]{2}|[0-9])")
@@ -50,13 +52,13 @@ def tokenize(mol, rep, randomize=False):
     blocks = [v[i:i + BLOCK] for i in range(0, len(v), BLOCK)]
     if rep == "mv_atom":
         return [",".join(map(str, b)) for b in blocks]
-    if rep == "mv_field":
+    if rep in ("mv_field", "mv_back"):
         toks = []
         for b in blocks:
             toks.append("A%d,%d,%d" % tuple(b[:mv.atom_size]))
             for k in range(mv.max_num_bonds):
                 btype, off = b[mv.atom_size + 2 * k], b[mv.atom_size + 2 * k + 1]
-                if off:
+                if off and (rep == "mv_field" or off < 0):
                     toks.append("B%d,%d" % (btype, off))
         return toks
     raise ValueError(rep)
