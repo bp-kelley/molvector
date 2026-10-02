@@ -318,6 +318,24 @@ def cmd_score(a):
     print(json.dumps(res, indent=1))
 
 
+def frechet_distance(p, q, eps=1e-6):
+    """FCD from ChemNet statistics, as fcd_torch computes it.
+
+    Done here because fcd_torch passes sqrtm(disp=False), which newer SciPy
+    no longer accepts.
+    """
+    from scipy import linalg
+    if not p or not q:
+        return float("nan")
+    diff = p["mu"] - q["mu"]
+    covmean = linalg.sqrtm(p["sigma"].dot(q["sigma"]))
+    if not np.isfinite(covmean).all():
+        offset = np.eye(p["sigma"].shape[0]) * eps
+        covmean = linalg.sqrtm((p["sigma"] + offset).dot(q["sigma"] + offset))
+    covmean = np.real(covmean)
+    return float(diff.dot(diff) + np.trace(p["sigma"]) + np.trace(q["sigma"]) - 2 * np.trace(covmean))
+
+
 def score(smis, data_dir, fcd_device):
     valid = [s for s in smis if s]
     uniq = set(valid)
@@ -336,7 +354,7 @@ def score(smis, data_dir, fcd_device):
         gen = list(uniq)[:10000] if len(uniq) >= 10000 else list(uniq)
         for split in ("test", "test_scaffolds"):
             ref = random.Random(0).sample(moses_smiles(data_dir, split), 10000)
-            res["fcd_" + split] = float(fcd(ref, gen))
+            res["fcd_" + split] = frechet_distance(fcd.precalc(ref), fcd.precalc(gen))
     except ImportError:
         print("fcd_torch not installed; skipping FCD")
     return res
