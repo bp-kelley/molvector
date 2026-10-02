@@ -75,3 +75,19 @@ and FCD against MOSES Test and TestSF.
   molvector samples. `mv_back` removes the duplicate to test that directly.
 - molvector currently drops stereochemistry, and so does this benchmark for
   every rep (MOSES is mostly stereo-free).
+
+## GRU decoder variant
+
+`bench-gru.py` runs the same benchmark with a 3-layer, 768-wide GRU (about
+10.6M parameters, the size of a 6×384 transformer). It tests whether
+molvector's 2019 advantage came from recurrent decoders, which must carry
+ring-closure digits and open branches across a whole SMILES string. It reuses
+the data in `runs/` and writes to `runs_gru/`, so transformer results are left
+alone.
+
+```bash
+python bench-gru.py train  --rep smiles --steps 20000
+python bench-gru.py train  --rep mv_back --steps 20000
+python bench-gru.py sample --rep all --fcd-device cpu
+python bench-gru.py report
+```
