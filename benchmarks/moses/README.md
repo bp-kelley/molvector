@@ -30,6 +30,9 @@ python bench.py sample  --rep all            # 30k samples each, MOSES metrics +
 python bench.py report                        # writes runs/report.md
 ```
 
+`python bench.py score --rep <rep>` re-scores an existing `runs/<rep>/samples.txt`
+without sampling again.
+
 Each rep is independent, so on several GPUs run them in parallel:
 
 ```bash

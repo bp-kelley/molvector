@@ -306,6 +306,18 @@ def cmd_sample(a):
     print(json.dumps(res, indent=1))
 
 
+def cmd_score(a):
+    """Re-score an existing samples.txt without sampling again."""
+    d = os.path.join(a.work_dir, a.rep)
+    with open(os.path.join(d, "samples.txt")) as fh:
+        smis = [s or None for s in fh.read().split("\n")]
+    ck = torch.load(os.path.join(d, "model.pt"), map_location="cpu")
+    res = score(smis, a.data_dir, a.fcd_device or "cpu")
+    res.update(rep=a.rep, n_params=sum(t.numel() for k, t in ck["model"].items() if k != "head.weight"))
+    json.dump(res, open(os.path.join(d, "results.json"), "w"), indent=1)
+    print(json.dumps(res, indent=1))
+
+
 def score(smis, data_dir, fcd_device):
     valid = [s for s in smis if s]
     uniq = set(valid)
@@ -316,6 +328,8 @@ def score(smis, data_dir, fcd_device):
                unique_at_1k=len(set(valid[:1000])) / max(1, len(valid[:1000])),
                unique_at_10k=len(set(valid[:10000])) / max(1, len(valid[:10000])),
                novelty=len(uniq - train) / max(1, len(uniq)))
+    if not hasattr(np, "row_stack"):
+        np.row_stack = np.vstack  # removed in NumPy 2.4, still used by fcd_torch
     try:
         from fcd_torch import FCD
         fcd = FCD(device=fcd_device, n_jobs=1)
@@ -371,7 +385,7 @@ def cmd_report(a):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("cmd", choices=["prepare", "train", "sample", "report"])
+    p.add_argument("cmd", choices=["prepare", "train", "sample", "score", "report"])
     p.add_argument("--rep", default="all", choices=("all",) + REPRESENTATIONS)
     p.add_argument("--data-dir", default="data")
     p.add_argument("--work-dir", default="runs")
