@@ -11,7 +11,8 @@ faster, or produce better molecules, than it learns SMILES or SELFIES?
 | `selfies`  | a SELFIES symbol                                     | ~35               |
 | `mv_atom`  | a whole molvector atom block (13 ints)               | ~22               |
 | `mv_field` | the atom fields, or one `(bond type, offset)` record | ~68               |
-| `mv_back`  | as `mv_field`, but each bond written once (to an earlier atom) | ~46     |
+| `mv_back`  | as `mv_field`, but each bond written once (to an earlier atom) | ~45     |
+| `mv_lean`  | as `mv_back`, on the Kekulé form with no hydrogen-count field  | ~45     |
 
 All four use the canonical RDKit atom order by default. `--augment K` adds
 K random-order variants per molecule (randomized SMILES/SELFIES, or random
@@ -33,7 +34,7 @@ Each rep is independent, so on several GPUs run them in parallel:
 
 ```bash
 python bench.py prepare --rep all
-i=0; for r in smiles selfies mv_atom mv_field mv_back; do
+i=0; for r in smiles selfies mv_atom mv_field mv_back mv_lean; do
   (export CUDA_VISIBLE_DEVICES=$i; python bench.py train --rep $r && python bench.py sample --rep $r) &
   i=$((i+1))
 done; wait; python bench.py report

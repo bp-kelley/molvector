@@ -11,6 +11,8 @@ tokens do not decode to a sanitizable molecule).
             per non-empty (bond type, offset) record
   mv_back   like mv_field, but each bond is written once, from its later
             atom (negative offsets only), so the two ends cannot disagree
+  mv_lean   like mv_back, on the Kekule form with no hydrogen count, so the
+            model never has to get aromaticity or H counts consistent
 """
 import os
 import re
@@ -22,7 +24,7 @@ from rdkit import Chem
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 import molvector as mv  # noqa: E402
 
-REPRESENTATIONS = ("smiles", "selfies", "mv_atom", "mv_field", "mv_back")
+REPRESENTATIONS = ("smiles", "selfies", "mv_atom", "mv_field", "mv_back", "mv_lean")
 
 SMILES_REGEX = re.compile(
     r"(\[[^\]]+]|Br?|Cl?|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\|\/|:|~|@|\?|>|\*|\$|%[0-9]{2}|[0-9])")
@@ -48,14 +50,20 @@ def tokenize(mol, rep, randomize=False):
     if rep == "selfies":
         smi = Chem.MolToSmiles(mol, canonical=not randomize, doRandom=randomize)
         return list(sf.split_selfies(sf.encoder(smi)))
+    if rep == "mv_lean":
+        mol = Chem.Mol(mol)
+        Chem.Kekulize(mol, clearAromaticFlags=True)
     v = molvector_of(mol, randomize)
     blocks = [v[i:i + BLOCK] for i in range(0, len(v), BLOCK)]
     if rep == "mv_atom":
         return [",".join(map(str, b)) for b in blocks]
-    if rep in ("mv_field", "mv_back"):
+    if rep in ("mv_field", "mv_back", "mv_lean"):
         toks = []
         for b in blocks:
-            toks.append("A%d,%d,%d" % tuple(b[:mv.atom_size]))
+            if rep == "mv_lean":
+                toks.append("A%d,%d" % tuple(b[:2]))
+            else:
+                toks.append("A%d,%d,%d" % tuple(b[:mv.atom_size]))
             for k in range(mv.max_num_bonds):
                 btype, off = b[mv.atom_size + 2 * k], b[mv.atom_size + 2 * k + 1]
                 if off and (rep == "mv_field" or off < 0):
@@ -107,7 +115,10 @@ def detokenize(tokens, rep):
                 blocks = [[int(x) for x in t.split(",")] for t in tokens]
             else:
                 blocks = _blocks_from_fields(tokens)
-            if rep == "mv_back":
+            if rep == "mv_lean":
+                # hydrogen count 0: RDKit fills in implicit hydrogens
+                blocks = [b[:2] + [0] + b[2:] for b in blocks]
+            if rep in ("mv_back", "mv_lean"):
                 blocks = _mirror_bonds(blocks)
             v = []
             for b in blocks:
