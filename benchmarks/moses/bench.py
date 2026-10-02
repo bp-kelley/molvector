@@ -309,6 +309,9 @@ def cmd_sample(a):
 def cmd_score(a):
     """Re-score an existing samples.txt without sampling again."""
     d = os.path.join(a.work_dir, a.rep)
+    if not os.path.exists(os.path.join(d, "samples.txt")):
+        print("%s: no samples.txt yet, run 'sample --rep %s' first" % (a.rep, a.rep))
+        return
     with open(os.path.join(d, "samples.txt")) as fh:
         smis = [s or None for s in fh.read().split("\n")]
     ck = torch.load(os.path.join(d, "model.pt"), map_location="cpu")
