@@ -103,6 +103,64 @@ def _mirror_bonds(blocks):
     return out
 
 
+def decode_with_repair(v, max_fixes=16):
+    """Decode a molvector, fixing valence the way SELFIES does.
+
+    molvector.decode always yields a graph, but the graph need not be
+    chemical. Overfull atoms get their highest-order bond downgraded, then
+    removed; aromatic rings that cannot be kekulized are saturated. Returns
+    the canonical SMILES of the largest surviving fragment, or None.
+    """
+    try:
+        mol = mv.decode(v)
+    except Exception:
+        return None
+    for _ in range(max_fixes):
+        try:
+            Chem.SanitizeMol(mol)
+            break
+        except Chem.AtomValenceException as e:
+            m = re.search(r"atom # (\d+)", str(e))
+            if m is None:
+                return None
+            atom = mol.GetAtomWithIdx(int(m.group(1)))
+            bonds = sorted(atom.GetBonds(), key=lambda b: -b.GetBondTypeAsDouble())
+            if not bonds:
+                return None
+            _downgrade(mol, bonds[0])
+        except Chem.KekulizeException:
+            for bond in mol.GetBonds():
+                if bond.GetBondType() == Chem.BondType.AROMATIC:
+                    bond.SetBondType(Chem.BondType.SINGLE)
+                    bond.SetIsAromatic(False)
+            for atom in mol.GetAtoms():
+                atom.SetIsAromatic(False)
+        except Exception:
+            return None
+    else:
+        return None
+    try:
+        frags = Chem.GetMolFrags(mol, asMols=True, sanitizeFrags=True)
+    except Exception:
+        return None
+    if not frags:
+        return None
+    largest = max(frags, key=lambda f: f.GetNumAtoms())
+    return Chem.MolToSmiles(largest) if largest.GetNumAtoms() else None
+
+
+def _downgrade(mol, bond):
+    """Single-step reduction of a bond: triple to double to single to gone."""
+    order = bond.GetBondType()
+    if order == Chem.BondType.TRIPLE:
+        bond.SetBondType(Chem.BondType.DOUBLE)
+    elif order in (Chem.BondType.DOUBLE, Chem.BondType.AROMATIC):
+        bond.SetBondType(Chem.BondType.SINGLE)
+        bond.SetIsAromatic(False)
+    else:
+        mol.RemoveBond(bond.GetBeginAtomIdx(), bond.GetEndAtomIdx())
+
+
 def detokenize(tokens, rep):
     """Return a canonical SMILES string or None."""
     try:
