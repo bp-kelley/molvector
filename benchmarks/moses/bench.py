@@ -286,6 +286,9 @@ def cmd_train(a):
 
 def cmd_sample(a):
     d = os.path.join(a.work_dir, a.rep)
+    if not os.path.exists(os.path.join(d, "model.pt")):
+        print("%s: no model yet, run 'train --rep %s' first" % (a.rep, a.rep))
+        return
     meta = json.load(open(os.path.join(d, "meta.json")))
     ck = torch.load(os.path.join(d, "model.pt"), map_location="cpu")
     ta = ck["args"]
